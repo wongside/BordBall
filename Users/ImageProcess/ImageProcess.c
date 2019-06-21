@@ -1,5 +1,4 @@
 #include "ImageProcess.h"
-#include "LCD.h"
 
 uint16_t RGBYUVImage[IMAGE_W][IMAGE_W] __attribute__((section(".ARM.__at_0x20000000")));
 //uint8_t TowValueImage[IMAGE_W][IMAGE_W/8] __attribute__((section(".ARM.__at_0x1000d240")));

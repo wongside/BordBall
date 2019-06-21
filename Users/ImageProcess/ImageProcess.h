@@ -3,6 +3,7 @@
 #include "stm32f4xx_hal.h"
 #include "stdint.h"
 #include "stdbool.h"
+#include "stdlib.h"
 #include "math.h"
 #define IMAGE_W 232
 #define VOTENUMBER 800
