@@ -73,101 +73,87 @@ Gradient Sobel_Gradient(uint8_t x,uint8_t y)
 		G.lenth=0;
 	return G;
 }
-Center find_circle()
+void Vote(uint16_t x,uint16_t y,uint16_t * CentersNumber)
 {
-	uint16_t CentersNumber=0;
-	for(uint16_t y=1;y<IMAGE_W-1&&CentersNumber<VOTENUMBER;y++)
+	Gradient G=Sobel_Gradient(x,y);
+	if(G.lenth)//允许投票
 	{
-		for(uint16_t x=1;x<IMAGE_W-1&&CentersNumber<VOTENUMBER;x++)
+		/*计算投票点*/
+		point tCenter[R_RANGE];
+		if(abs(G.X)>abs(G.Y))
 		{
-			Gradient G=Sobel_Gradient(x,y);
-			if(G.lenth)//允许投票
+			float K=(float)G.Y/G.X;
+			float stepX=__sqrtf(1/(K*K+1));
+			for(uint8_t i=0;i<R_RANGE;i++)
 			{
-				/*计算投票点*/
-				
-				point tCenter[R_RANGE];
-//				if(abs(G.X)>abs(G.Y))
-//				{
-//					float K=(float)G.Y/G.X;
-//					for(uint8_t i=0;i<R_RANGE;i++)
-//					{
-//							float r=RADIUS-HALF_R_RANGE+i;
-//							float steapX=__sqrtf((r*r)/(K*K+1));
-//							float steapY=_fabsf(K*steapX);
-//							tCenter[i].x=G.X>0?x+steapX:x-steapX;
-//							tCenter[i].y=G.Y<0?y+steapY:y-steapY;
-//							tCenter[i].value=1;
-//					}
-//				}
-//				else
-//				{
-//					float K=(float)G.X/G.Y;
-//					for(uint8_t i=0;i<R_RANGE;i++)
-//					{
-//						float r=RADIUS-HALF_R_RANGE+i;
-//						float steapY=__sqrtf((r*r)/(K*K+1));
-//						float steapX=_fabsf(K*steapY);
-//						tCenter[i].x=G.X>0?x+steapX:x-steapX;
-//						tCenter[i].y=G.Y<0?y+steapY:y-steapY;
-//						tCenter[i].value=1;
-//					}
-				if(abs(G.X)>abs(G.Y))
+					float r=RADIUS-HALF_R_RANGE+i;
+					float steapX=stepX*r;
+					float steapY=_fabsf(K*steapX);
+					tCenter[i].x=G.X>0?x+steapX:x-steapX;
+					tCenter[i].y=G.Y<0?y+steapY:y-steapY;
+					tCenter[i].confidence=1;
+			}
+		}
+		else
+		{
+			float K=(float)G.X/G.Y;
+			float stepY=__sqrtf(1/(K*K+1));
+			for(uint8_t i=0;i<R_RANGE;i++)
+			{
+				float r=RADIUS-HALF_R_RANGE+i;
+				float steapY=stepY*r;
+				float steapX=_fabsf(K*steapY);
+				tCenter[i].x=G.X>0?x+steapX:x-steapX;
+				tCenter[i].y=G.Y<0?y+steapY:y-steapY;
+				tCenter[i].confidence=1;
+			}
+		}
+		/*处理投票点*/
+		uint8_t VoteNUM=R_RANGE;
+		while(VoteNUM>0)
+		{
+			point ttCenter=tCenter[VoteNUM-1];
+			bool EndVoteFLAG=false;
+			for(uint16_t i=0;i<*CentersNumber;i++)//寻找是否是已投的点
+			{
+				if(Centers[i].x==ttCenter.x&&Centers[i].y==ttCenter.y)
 				{
-					float K=(float)G.Y/G.X;
-					float stepX=__sqrtf(1/(K*K+1));
-					for(uint8_t i=0;i<R_RANGE;i++)
-					{
-							float r=RADIUS-HALF_R_RANGE+i;
-							float steapX=stepX*r;
-							float steapY=_fabsf(K*steapX);
-							tCenter[i].x=G.X>0?x+steapX:x-steapX;
-							tCenter[i].y=G.Y<0?y+steapY:y-steapY;
-							tCenter[i].confidence=1;
-					}
-				}
-				else
-				{
-					float K=(float)G.X/G.Y;
-					float stepY=__sqrtf(1/(K*K+1));
-					for(uint8_t i=0;i<R_RANGE;i++)
-					{
-						float r=RADIUS-HALF_R_RANGE+i;
-						float steapY=stepY*r;
-						float steapX=_fabsf(K*steapY);
-						tCenter[i].x=G.X>0?x+steapX:x-steapX;
-						tCenter[i].y=G.Y<0?y+steapY:y-steapY;
-						tCenter[i].confidence=1;
-					}
-				}
-				/*处理投票点*/
-				uint8_t VoteNUM=R_RANGE;
-				while(VoteNUM>0)
-				{
-					point ttCenter=tCenter[VoteNUM-1];
-					bool EndVoteFLAG=false;
-					for(uint16_t i=0;i<CentersNumber;i++)//寻找是否是已投的点
-					{
-						if(Centers[i].x==ttCenter.x&&Centers[i].y==ttCenter.y)
-						{
-							Centers[i].confidence+=1;
-							EndVoteFLAG=true;
-							break;
-						}
-					}
-					if(!EndVoteFLAG)//这个点是新点
-					{
-						Centers[CentersNumber]=ttCenter;
-						CentersNumber++;
-					}
-					if (CentersNumber == VOTENUMBER)
-						break;
-					VoteNUM--;
+					Centers[i].confidence+=1;
+					EndVoteFLAG=true;
+					break;
 				}
 			}
-			x+=1;
+			if(!EndVoteFLAG)//这个点是新点
+			{
+				if (*CentersNumber == VOTENUMBER)
+					break;
+				Centers[*CentersNumber]=ttCenter;
+				(*CentersNumber)++;
+			}
+			VoteNUM--;
 		}
-		y+=1;
 	}
+}
+void ConvolutionAndVote(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t * CentersNumber)
+{
+	for (uint16_t y = y1; y < y2 && *CentersNumber < VOTENUMBER; y++)
+	{
+		for (uint16_t x = x1; x < x2 && *CentersNumber < VOTENUMBER; x++)
+		{
+			Vote(x, y, CentersNumber);
+			x += 1;
+		}
+		y += 1;
+	}
+}
+Center find_circle()
+{
+	uint16_t CentersNumber = 0;
+	ConvolutionAndVote(50,50,182,182,&CentersNumber);//中间矩形
+	ConvolutionAndVote(1, 1, IMAGE_W-1, 50, &CentersNumber);//上边框
+	ConvolutionAndVote(1, 182, IMAGE_W - 1, IMAGE_W - 1, &CentersNumber);//下边框
+	ConvolutionAndVote(1, 50, 50, 182, &CentersNumber);//左边框
+	ConvolutionAndVote(182, 50, IMAGE_W - 1, 182, &CentersNumber);//右边框
 	Center max;
 	max.confidence=0;
 	max.x=0;
