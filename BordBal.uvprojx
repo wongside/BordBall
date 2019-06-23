@@ -338,7 +338,7 @@
               <MiscControls></MiscControls>
               <Define>STM32F407xx</Define>
               <Undefine></Undefine>
-              <IncludePath>.\External\LCD;.\External\OV2640;.\Users\ImageProcess;.\Users\TimeBase</IncludePath>
+              <IncludePath>.\External\LCD;.\External\OV2640;.\Users\ImageProcess;.\Users\TimeBase;.\External\MOTO</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -424,6 +424,11 @@
               <FileName>SCCB.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\External\OV2640\SCCB.c</FilePath>
+            </File>
+            <File>
+              <FileName>MOTO.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\External\MOTO\MOTO.c</FilePath>
             </File>
           </Files>
         </Group>

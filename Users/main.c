@@ -4,6 +4,7 @@
 #include "FreeRTOS.h"
 #include "Task.h"
 #include "ImageProcess.h"
+#include "MOTO.h" 
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
@@ -44,16 +45,33 @@ void SystemClock_Config(void)
 }
 void Task()
 {
+	float A=0,B=0;
+	bool AF=false,BF=false;
 	while(1)
 	{
-		HAL_GPIO_WritePin(GPIOA,GPIO_PIN_1,GPIO_PIN_SET);
-		vTaskDelay(500);
-		HAL_GPIO_WritePin(GPIOA,GPIO_PIN_1,GPIO_PIN_RESET);
-		vTaskDelay(500);
+		Moto1_Set(A);
+		Moto2_Set(B);
+		if(AF)
+			A+=0.1f;
+		else
+			A-=0.2f;
+		if(BF)
+			B+=0.2f;
+		else
+			B-=0.3f;
+		if(A<0)
+			AF=true;
+		if(A>100)
+			AF=false;
+		if(B<0)
+			BF=true;
+		if(B>100)
+			BF=false;
+		vTaskDelay(3);
 	}
 }
 #define GRAY_BACKGROUND
-#define VOTE_POINT
+//#define VOTE_POINT
 #define TRACT
 #define CONFIDENCE
 void OV2640_FrameReady(void)
@@ -127,6 +145,7 @@ int main ()
 	
 	LCD_Init();
 	OV2640_Init();
+	Moto_Init();
 	
 	LCD_Display_Dir(0);
 	LCD_Scan_Dir(L2R_U2D);
@@ -151,7 +170,6 @@ int main ()
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-	while(1);
-	//xTaskCreate((TaskFunction_t)Task,"keyscan",300,NULL,3,NULL);
-	//vTaskStartScheduler();
+	xTaskCreate((TaskFunction_t)Task,"keyscan",300,NULL,3,NULL);
+	vTaskStartScheduler();
 }
