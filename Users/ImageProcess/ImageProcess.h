@@ -3,9 +3,10 @@
 #include "stm32f4xx_hal.h"
 #include "stdint.h"
 #include "stdbool.h"
+#include "stdlib.h"
 #include "math.h"
 #define IMAGE_W 232
-#define VOTENUMBER 800
+#define VOTENUMBER 400
 #define RADIUS 13
 #define R_RANGE 3
 #define HALF_R_RANGE R_RANGE/2
