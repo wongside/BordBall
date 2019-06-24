@@ -16,6 +16,7 @@ xSemaphoreHandle xSemaphorezz;
 
 PID_IncTypeDef pid1, pid2;
 
+
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
@@ -100,9 +101,50 @@ void Task()
 //#define VOTE_POINT
 #define TRACT
 #define CONFIDENCE
+
+void calu(Center p){
+
+	static float v1 = 90, v2 = 90;
+	
+	static unsigned char str[20];
+
+	LCD_Set_Window(0,0,240,320);
+	
+	sprintf(str, "x:%3d y:%3d", p.x, p.y);
+	LCD_ShowString(100, 300, 100, 50, 16, str);
+
+	v1 += PID_Inc(115, p.x, &pid1);
+	v2 += PID_Inc(120, p.y, &pid2);
+	
+	if(v1 < 0){
+		v1 = 0;
+	}
+	if(v1 > 180){
+		v1 = 180;
+	}
+	
+	if(v2 < 0){
+		v2 = 0;
+	}
+	if(v2 > 180){
+		v2 = 180;
+	}
+	
+	sprintf(str, "xcal: %6.2f", v1);
+	LCD_ShowString(100, 275, 100, 50, 16, str);
+	sprintf(str, "ycal: %6.2f", v2);
+	LCD_ShowString(100, 250, 100, 50, 16, str);
+	
+	
+	Moto1_Set(v1);
+//	Moto2_Set(v2);
+	
+}
+
+
 void OV2640_FrameReady(void)
 {
-	float v1, v2;
+	
 	
 	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_1,GPIO_PIN_SET);
 	//×ª»»Îª»Ò¶ÈÍ¼
@@ -111,14 +153,11 @@ void OV2640_FrameReady(void)
 	//Ñ°ÕÒÔ²ÐÄ
 	Center p=find_circle();//14ms
 	//»­ÉãÏñÍ·±³¾°
-//	unsigned char * str = {"ddd"};
-//	LCD_ShowxNum(200,300, p.x, 3, 12, 0);
-//	LCD_ShowxNum(200,250, p.x, 3, 12, 0);
-//	LCD_ShowString(200, 200, 50, 50, 12, str);
-	v1 = PID_Inc(232/2, p.x, &pid1);
-//	Moto2_Set(v1);
-//	v2 = PID_Inc(0, p.y, &pid1);
+	if(p.confidence > 5){
+		calu(p);
+	}
 	
+
 #ifdef GRAY_BACKGROUND
 	LCD_Set_Window(0,0,IMAGE_W,IMAGE_W);
 	//LCD_SetCursor(0,0);
@@ -212,8 +251,10 @@ int main ()
 	
 	PID_Init(&pid1);
 	PID_Init(&pid2);
-	PID_Set_Value(&pid1, 10, 0, 0);
-	Moto1_Set(45);
+	PID_Set_Value(&pid1, 0.1, 0, 0);
+	PID_Set_Value(&pid2, 0.1, 0, 0);
+	Moto1_Set(90);
+	Moto2_Set(90);
 	if( xSemaphorezz != NULL ){
 
 		xTaskCreate((TaskFunction_t)IRQHandleTask,"keyscan",300,NULL,3,NULL);
