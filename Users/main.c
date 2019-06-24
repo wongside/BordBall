@@ -1,10 +1,21 @@
 #include "stm32f4xx_hal.h"
-#include "OV2640.h"
-#include "LCD.h"
+
 #include "FreeRTOS.h"
 #include "Task.h"
+#include "event_groups.h"
+#include "semphr.h" 
+
 #include "ImageProcess.h"
-#include "MOTO.h" 
+#include "MOTO.h"
+#include "OV2640.h"
+#include "LCD.h"
+#include "pid.h"
+
+
+xSemaphoreHandle xSemaphorezz;
+
+PID_IncTypeDef pid1, pid2;
+
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
@@ -43,6 +54,20 @@ void SystemClock_Config(void)
   // Enables the Clock Security System 
   HAL_RCC_EnableCSS();
 }
+void IRQHandleTask()
+{
+
+	
+	
+	while(1){
+		xSemaphoreTake(xSemaphorezz, portMAX_DELAY);
+
+		OV2640_FrameReady();
+
+	}
+	
+}
+
 void Task()
 {
 	float A=0,B=0;
@@ -69,6 +94,7 @@ void Task()
 			BF=false;
 		vTaskDelay(3);
 	}
+
 }
 #define GRAY_BACKGROUND
 //#define VOTE_POINT
@@ -76,6 +102,8 @@ void Task()
 #define CONFIDENCE
 void OV2640_FrameReady(void)
 {
+	float v1, v2;
+	
 	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_1,GPIO_PIN_SET);
 	//×ª»»Îª»Ò¶ÈÍ¼
 	RGB_to_gray();//4.4ms
@@ -83,6 +111,14 @@ void OV2640_FrameReady(void)
 	//Ñ°ÕÒÔ²ÐÄ
 	Center p=find_circle();//14ms
 	//»­ÉãÏñÍ·±³¾°
+//	unsigned char * str = {"ddd"};
+//	LCD_ShowxNum(200,300, p.x, 3, 12, 0);
+//	LCD_ShowxNum(200,250, p.x, 3, 12, 0);
+//	LCD_ShowString(200, 200, 50, 50, 12, str);
+	v1 = PID_Inc(232/2, p.x, &pid1);
+//	Moto2_Set(v1);
+//	v2 = PID_Inc(0, p.y, &pid1);
+	
 #ifdef GRAY_BACKGROUND
 	LCD_Set_Window(0,0,IMAGE_W,IMAGE_W);
 	//LCD_SetCursor(0,0);
@@ -137,6 +173,7 @@ void OV2640_FrameReady(void)
 	//OV2640_OutStart((uint32_t)&LCD->LCD_RAM, 1);//Æô¶¯´«Êä
 	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_1,GPIO_PIN_RESET);
 }
+
 int main ()
 {
 	uint16_t mai;
@@ -170,6 +207,20 @@ int main ()
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-	xTaskCreate((TaskFunction_t)Task,"keyscan",300,NULL,3,NULL);
-	vTaskStartScheduler();
+//	vSemaphoreCreateBinary(xSemaphorezz);
+	xSemaphorezz = xSemaphoreCreateCounting(10, 0);
+	
+	PID_Init(&pid1);
+	PID_Init(&pid2);
+	PID_Set_Value(&pid1, 10, 0, 0);
+	Moto1_Set(45);
+	if( xSemaphorezz != NULL ){
+
+		xTaskCreate((TaskFunction_t)IRQHandleTask,"keyscan",300,NULL,3,NULL);
+//		xTaskCreate((TaskFunction_t)Task,"keyscan",300,NULL,1,NULL);
+		vTaskStartScheduler();		
+	
+	}
+	while(1);
+
 }

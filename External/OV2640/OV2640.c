@@ -1,6 +1,15 @@
 #include "stm32f4xx_hal.h"
+
+#include "FreeRTOS.h"
+#include "Task.h"
+#include "event_groups.h"
+#include "semphr.h" 
+
 #include "OV2640.h"
 #include "SCCB.h"	
+
+extern xSemaphoreHandle xSemaphorezz;
+
 DCMI_HandleTypeDef hdcmi;
 DMA_HandleTypeDef hdma_dcmi;
 void HAL_DCMI_MspInit(DCMI_HandleTypeDef* hdcmi)
@@ -130,16 +139,25 @@ void OV2640_OutStop(void)
 {
 	HAL_DCMI_Stop(&hdcmi); //DCMI²¶»ñÊ¹¹Ø±Õ	
 }
-__weak void OV2640_FrameReady(void)
-{
-	
-}
+//__weak void OV2640_FrameReady(void)
+//{
+//	
+//}
 void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
 {
+	static portBASE_TYPE xHigherPriorityTaskWoken;
+	
 	//OV2640_OutSuspend();
 	__HAL_DCMI_ENABLE_IT(hdcmi, DCMI_IT_FRAME);
 	DCMI->ICR=0x1;
-	OV2640_FrameReady();
+	
+	xHigherPriorityTaskWoken = pdFALSE;
+	xSemaphoreGiveFromISR(xSemaphorezz, &xHigherPriorityTaskWoken); 
+	if( xHigherPriorityTaskWoken == pdTRUE ) { 
+//		vTaskSwitchContext();
+	}
+	
+//	OV2640_FrameReady();
 	
 	//OV2640_OutResume();
 }
