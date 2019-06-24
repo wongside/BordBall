@@ -338,7 +338,7 @@
               <MiscControls></MiscControls>
               <Define>STM32F407xx</Define>
               <Undefine></Undefine>
-              <IncludePath>.\External\LCD;.\External\OV2640;.\Users\ImageProcess;.\Users\TimeBase;.\External\MOTO</IncludePath>
+              <IncludePath>.\External\LCD;.\External\OV2640;.\Users\ImageProcess;.\Users\TimeBase;.\External\MOTO;.\Inside\pid</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -406,6 +406,13 @@
         </Group>
         <Group>
           <GroupName>Inside</GroupName>
+          <Files>
+            <File>
+              <FileName>pid.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Inside\pid\pid.c</FilePath>
+            </File>
+          </Files>
         </Group>
         <Group>
           <GroupName>External</GroupName>
