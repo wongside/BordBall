@@ -78,22 +78,26 @@ void Moto_Init()
 	HAL_TIM_MspPostInit(&htim2);
 	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
 	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3);
-	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1,700);
-	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3,700);
+	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1,200);
+	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3,200);
 }
 void Moto1_Set(float per)
 {
-	if(per>100)
-		per=100;
+	//93
+	//20
+	if(per>180)
+		per=180;
 	if(per<0)
 		per=0;
+	per=per*0.406f+20;
 	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1,period*(per/100));
 }
 void Moto2_Set(float per)
 {
-	if(per>100)
-		per=100;
+	if(per>180)
+		per=180;
 	if(per<0)
 		per=0;
+	per=per*0.406f+20;
 	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3,period*(per/100));
 }
