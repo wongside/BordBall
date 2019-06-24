@@ -1,10 +1,22 @@
 #include "stm32f4xx_hal.h"
-#include "OV2640.h"
-#include "LCD.h"
+
 #include "FreeRTOS.h"
 #include "Task.h"
+#include "event_groups.h"
+#include "semphr.h" 
+
 #include "ImageProcess.h"
-#include "MOTO.h" 
+#include "MOTO.h"
+#include "OV2640.h"
+#include "LCD.h"
+#include "pid.h"
+
+
+xSemaphoreHandle xSemaphorezz;
+
+PID_IncTypeDef pid1, pid2;
+
+
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
@@ -43,6 +55,20 @@ void SystemClock_Config(void)
   // Enables the Clock Security System 
   HAL_RCC_EnableCSS();
 }
+void IRQHandleTask()
+{
+
+	
+	
+	while(1){
+		xSemaphoreTake(xSemaphorezz, portMAX_DELAY);
+
+		OV2640_FrameReady();
+
+	}
+	
+}
+
 void Task()
 {
 	float A=0,B=0;
@@ -69,13 +95,57 @@ void Task()
 			BF=false;
 		vTaskDelay(3);
 	}
+
 }
 #define GRAY_BACKGROUND
 //#define VOTE_POINT
 #define TRACT
 #define CONFIDENCE
+
+void calu(Center p){
+
+	static float v1 = 90, v2 = 90;
+	
+	static unsigned char str[20];
+
+	LCD_Set_Window(0,0,240,320);
+	
+	sprintf(str, "x:%3d y:%3d", p.x, p.y);
+	LCD_ShowString(100, 300, 100, 50, 16, str);
+
+	v1 += PID_Inc(115, p.x, &pid1);
+	v2 += PID_Inc(120, p.y, &pid2);
+	
+	if(v1 < 0){
+		v1 = 0;
+	}
+	if(v1 > 180){
+		v1 = 180;
+	}
+	
+	if(v2 < 0){
+		v2 = 0;
+	}
+	if(v2 > 180){
+		v2 = 180;
+	}
+	
+	sprintf(str, "xcal: %6.2f", v1);
+	LCD_ShowString(100, 275, 100, 50, 16, str);
+	sprintf(str, "ycal: %6.2f", v2);
+	LCD_ShowString(100, 250, 100, 50, 16, str);
+	
+	
+	Moto1_Set(v1);
+//	Moto2_Set(v2);
+	
+}
+
+
 void OV2640_FrameReady(void)
 {
+	
+	
 	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_1,GPIO_PIN_SET);
 	//×ª»»Îª»Ò¶ÈÍ¼
 	RGB_to_gray();//4.4ms
@@ -83,6 +153,11 @@ void OV2640_FrameReady(void)
 	//Ñ°ÕÒÔ²ÐÄ
 	Center p=find_circle();//14ms
 	//»­ÉãÏñÍ·±³¾°
+	if(p.confidence > 5){
+		calu(p);
+	}
+	
+
 #ifdef GRAY_BACKGROUND
 	LCD_Set_Window(0,0,IMAGE_W,IMAGE_W);
 	//LCD_SetCursor(0,0);
@@ -137,6 +212,7 @@ void OV2640_FrameReady(void)
 	//OV2640_OutStart((uint32_t)&LCD->LCD_RAM, 1);//Æô¶¯´«Êä
 	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_1,GPIO_PIN_RESET);
 }
+
 int main ()
 {
 	uint16_t mai;
@@ -170,6 +246,22 @@ int main ()
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-	xTaskCreate((TaskFunction_t)Task,"keyscan",300,NULL,3,NULL);
-	vTaskStartScheduler();
+//	vSemaphoreCreateBinary(xSemaphorezz);
+	xSemaphorezz = xSemaphoreCreateCounting(10, 0);
+	
+	PID_Init(&pid1);
+	PID_Init(&pid2);
+	PID_Set_Value(&pid1, 0.1, 0, 0);
+	PID_Set_Value(&pid2, 0.1, 0, 0);
+	Moto1_Set(90);
+	Moto2_Set(90);
+	if( xSemaphorezz != NULL ){
+
+		xTaskCreate((TaskFunction_t)IRQHandleTask,"keyscan",300,NULL,3,NULL);
+//		xTaskCreate((TaskFunction_t)Task,"keyscan",300,NULL,1,NULL);
+		vTaskStartScheduler();		
+	
+	}
+	while(1);
+
 }
