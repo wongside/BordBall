@@ -138,10 +138,21 @@ void LCD_SetCursor(uint16_t Xpos, uint16_t Ypos)
 //dir:0,竖屏；1,横屏
 void LCD_Display_Dir(uint8_t dir)
 {
+	if(dir)
+	{
+		lcddev.width=320;
+		lcddev.height=240;
+	}
+	else
+	{
+		lcddev.width=240;
+		lcddev.height=320;
+	}
 	lcddev.dir=dir;
 	lcddev.setxcmd=0X2A;
 	lcddev.setycmd=0X2B;
 	LCD_Scan_Dir(DFT_SCAN_DIR);	//默认扫描方向
+	
 }
 //设置LCD的自动扫描方向
 //注意:其他函数可能会受到此函数设置的影响(尤其是9341/6804这两个奇葩),
