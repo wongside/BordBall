@@ -9,8 +9,8 @@ float PID_Inc(float SetValue, float ActualValue, PID_IncTypeDef *PID)
  
   PID->Ek2 = PID->Ek1;
   PID->Ek1 += PID->Ki *PID->Ek;
-	if(PID->Ek1>1.1f)PID->Ek1=1.1f;
-	else if(PID->Ek1<-1.1f)PID->Ek1=-1.1f;
+	if(PID->Ek1>1.3f)PID->Ek1=1.3f;
+	else if(PID->Ek1<-1.3f)PID->Ek1=-1.3f;
 	
 	return PIDInc;
 }

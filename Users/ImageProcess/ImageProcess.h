@@ -6,7 +6,7 @@
 #include "stdlib.h"
 #include "math.h"
 #define IMAGE_W 232
-#define VOTENUMBER 400
+#define VOTENUMBER 600
 typedef struct point
 {
 	uint8_t x;

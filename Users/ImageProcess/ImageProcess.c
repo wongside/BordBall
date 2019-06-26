@@ -161,8 +161,6 @@ void ConvolutionAndVote(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint
 }
 static filterstr POINTX={{0},POINTX.buffer,false};
 static filterstr POINTY={{0},POINTY.buffer,false};
-//static filterstr SPEEDX={{0},SPEEDX.buffer,false};
-//static filterstr SPEEDY={{0},SPEEDY.buffer,false};
 Center find_circle(uint8_t radius,uint8_t r_range,uint8_t Minconfidence)
 {
 	static Center Last_Center={0,0,0,0,0,0,0};
@@ -194,8 +192,8 @@ Center find_circle(uint8_t radius,uint8_t r_range,uint8_t Minconfidence)
 	max.Centers=Centers;
 	max.x=filter(&POINTX,max.x);
 	max.y=filter(&POINTY,max.y);
-	max.speedx=max.x-Last_Center.x;//filter(&SPEEDX,max.x-Last_Center.x);
-	max.speedy=max.y-Last_Center.y;//filter(&SPEEDY,max.y-Last_Center.y);
+	max.speedx=max.x-Last_Center.x;
+	max.speedy=max.y-Last_Center.y;
 	Last_Center=max;
 	return max;
 }
