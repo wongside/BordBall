@@ -101,7 +101,7 @@ void PIDUpdate(uint8_t x,uint8_t y,Center p)
 	LCD_ShowString(0, 32, 300, 50, 16, str);
 	
 	AngleX =70+ PID_Inc(SpeedX, p.speedx, &AngelPIDX);
-	AngleY =62+ PID_Inc(SpeedY, p.speedy, &AngelPIDY);
+	AngleY =60+ PID_Inc(SpeedY, p.speedy, &AngelPIDY);
 	
 	if(AngleX < 0){
 		AngleX = 0;
@@ -127,7 +127,7 @@ void PIDUpdate(uint8_t x,uint8_t y,Center p)
 }
 #define GRAY_BACKGROUND
 #define VOTE_POINT
-//#define TRACT
+#define TRACT
 #define SPEED
 #define TARGET_POSTION
 #define CONFIDENCE
@@ -136,7 +136,7 @@ void PIDUpdate(uint8_t x,uint8_t y,Center p)
 void Task_FrameReady(void)
 {
 	static Center p;
-	uint8_t px=50,py=50;
+	uint8_t px=CX,py=CY;
 	while(1)
 	{
 		xSemaphoreTake(xSemaphorezz, portMAX_DELAY);
@@ -240,14 +240,14 @@ int main ()
 	
 	PID_Init(&SpeedPIDX);
 	PID_Init(&SpeedPIDY);
-	PID_Set_Value(&SpeedPIDX, 0.052, -0.006, 0.01);
-	PID_Set_Value(&SpeedPIDY, 0.052, -0.006, 0.01);
+	PID_Set_Value(&SpeedPIDX, 0.012, -0.011, 0.035);
+	PID_Set_Value(&SpeedPIDY, 0.012, -0.011, 0.035);
 	PID_Init(&AngelPIDX);
 	PID_Init(&AngelPIDY);
-	PID_Set_Value(&AngelPIDX, 7, 0, 1);
-	PID_Set_Value(&AngelPIDY, 7, 0, 1);
+	PID_Set_Value(&AngelPIDX, 7.2, 0, 2.5);
+	PID_Set_Value(&AngelPIDY, 7.2, 0, 2.5);
 	Moto1_Set(70);
-	Moto2_Set(65);
+	Moto2_Set(60);
 	if( xSemaphorezz != NULL )
 	{
 		xTaskCreate((TaskFunction_t)Task_FrameReady,"keyscan",300,NULL,3,NULL);
