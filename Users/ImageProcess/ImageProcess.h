@@ -7,9 +7,6 @@
 #include "math.h"
 #define IMAGE_W 232
 #define VOTENUMBER 400
-#define RADIUS 13
-#define R_RANGE 3
-#define HALF_R_RANGE R_RANGE/2
 typedef struct point
 {
 	uint8_t x;
@@ -18,8 +15,10 @@ typedef struct point
 }point;
 typedef struct Center
 {
-	uint8_t x;
-	uint8_t y;
+	float x;
+	float y;
+	float speedx;
+	float speedy;
 	uint8_t confidence;
 	point* Centers;
 	uint16_t CentersNumber;
@@ -42,5 +41,5 @@ extern uint8_t GrayImage[IMAGE_W][IMAGE_W];
 uint16_t Gray8toGary16(uint8_t Gray8);
 void RGB_to_gray(void);
 void RGB_to_tow_value(void);
-Center find_circle(void);
+Center find_circle(uint8_t radius,uint8_t r_range,uint8_t Minconfidence);
 #endif

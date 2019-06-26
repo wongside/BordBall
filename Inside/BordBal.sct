@@ -11,6 +11,7 @@ LR_IROM1 0x08000000 0x00080000  {    ; load region size_region
   }
   RW_IRAM2 0x10000000 0x0000FFFF  {
 	startup_stm32f407xx.o (+RW +ZI)
+	imageprocess.o (+RW +ZI)
 	heap_4.o (+RW +ZI)
 	;queue.o (+RW +ZI)
 	port.o (+RW +ZI)
