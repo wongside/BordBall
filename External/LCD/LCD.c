@@ -74,6 +74,12 @@ uint16_t LCD_BGR2RGB(uint16_t c)
 	r=(c>>11)&0x1f;	 
 	rgb=(b<<11)+(g<<5)+(r<<0);		 
 	return(rgb);
+}
+uint16_t LCD_RGB_24_2_565(uint8_t r, uint8_t g, uint8_t b)  
+{  
+    return (uint16_t)(((r << 8) & 0xF800) |   
+            ((g << 3) & 0x7E0)  |  
+            ((b >> 3)));  
 } 
 //读取个某点的颜色值	 
 //x,y:坐标

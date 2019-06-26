@@ -83,6 +83,7 @@ void LCD_DisplayOn(void);					//开显示
 void LCD_DisplayOff(void);				//关显示
 void LCD_Clear(uint16_t Color);		//清屏
 void LCD_SetCursor(uint16_t Xpos, uint16_t Ypos);								//设置光标
+uint16_t LCD_RGB_24_2_565(uint8_t r, uint8_t g, uint8_t b);     //RGB888色彩转RGB565
 void LCD_DrawPoint(uint16_t x,uint16_t y);											//画点
 void LCD_Fast_DrawPoint(uint16_t x,uint16_t y,uint16_t color);	//快速画点
 uint16_t  LCD_ReadPoint(uint16_t x,uint16_t y);									//读点

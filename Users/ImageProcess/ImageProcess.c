@@ -25,30 +25,42 @@ void RGB_to_gray()
 		}
 	}
 }
-/*
-void RGB_to_tow_value()
+#define BN 4 //滤波数组大小
+typedef struct filterstr
 {
-	for(uint16_t y=0;y<IMAGE_W;y++)
+	int buffer[BN];
+	int* pbuffer;
+	bool FLAG_Begin;
+}filterstr;
+int filter(filterstr * filterpar,int value)
+{
+	static bool FLAG_Begin = false;
+	*filterpar->pbuffer = value;
+	if (filterpar->pbuffer == &filterpar->buffer[BN - 1])
 	{
-		uint16_t imagex=0;
-		for(uint16_t x=0;x<IMAGE_W/8;x++)
-		{
-			uint8_t imagepart=0;
-			for(uint8_t index=0;index<7;index++)
-			{
-				uint8_t Gary=RGB565toGary(RGBYUVImage[y][imagex]);
-				imagepart|=Gary>>7;
-				imagepart<<=1;
-				imagex++;
-			}
-			uint8_t Gary=RGB565toGary(RGBYUVImage[y][imagex]);
-			imagepart|=Gary>>7;
-			imagex++;
-			TowValueImage[y][x]=imagepart;
-		}
+		filterpar->pbuffer = filterpar->buffer;
+		FLAG_Begin = true;
 	}
+	else
+		filterpar->pbuffer++;
+	int Max = -1000, Min = 1000;
+	int Sum = 0;
+	if (FLAG_Begin)
+	{
+		for (uint8_t i = 0; i < BN; i++)
+		{
+			int Temp = filterpar->buffer[i];
+			if (Max < Temp)
+				Max = Temp;
+			if (Min > Temp)
+				Min = Temp;
+			Sum += Temp;
+		}
+		Sum -= Min + Max;
+		return (Sum / (BN - 2));
+	}
+	return 0;
 }
-*/
 Gradient Sobel_Gradient(uint8_t x,uint8_t y)
 {
 	Gradient G;
@@ -64,7 +76,7 @@ Gradient Sobel_Gradient(uint8_t x,uint8_t y)
 	//G.lenth=sqrt(X*X+Y*Y);//18ms
 	//G.lenth=_sqrt(X*X+Y*Y);//18ms
 	//G.lenth=(abs(Y)+abs(X));//3.2ms
-	if(G.lenth>150)
+	if(G.lenth>220)
 	{
 		G.X=X;
 		G.Y=Y;
@@ -73,6 +85,7 @@ Gradient Sobel_Gradient(uint8_t x,uint8_t y)
 		G.lenth=0;
 	return G;
 }
+uint8_t RADIUS=13,R_RANGE=3,HALF_R_RANGE=2;
 void Vote(uint16_t x,uint16_t y,uint16_t * CentersNumber)
 {
 	Gradient G=Sobel_Gradient(x,y);
@@ -146,18 +159,21 @@ void ConvolutionAndVote(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint
 		y += 1;
 	}
 }
-Center find_circle()
+static filterstr POINTX={{0},POINTX.buffer,false};
+static filterstr POINTY={{0},POINTY.buffer,false};
+//static filterstr SPEEDX={{0},SPEEDX.buffer,false};
+//static filterstr SPEEDY={{0},SPEEDY.buffer,false};
+Center find_circle(uint8_t radius,uint8_t r_range,uint8_t Minconfidence)
 {
+	static Center Last_Center={0,0,0,0,0,0,0};
+	RADIUS=radius,R_RANGE=r_range,HALF_R_RANGE=r_range/2;
 	uint16_t CentersNumber = 0;
 	ConvolutionAndVote(50,50,182,182,&CentersNumber);//中间矩形
 	ConvolutionAndVote(1, 1, IMAGE_W-1, 50, &CentersNumber);//上边框
 	ConvolutionAndVote(1, 182, IMAGE_W - 1, IMAGE_W - 1, &CentersNumber);//下边框
 	ConvolutionAndVote(1, 50, 50, 182, &CentersNumber);//左边框
 	ConvolutionAndVote(182, 50, IMAGE_W - 1, 182, &CentersNumber);//右边框
-	Center max;
-	max.confidence=0;
-	max.x=0;
-	max.y=0;
+	Center max={0,0,0,0,0};
 	if(CentersNumber)
 	{
 		for(uint16_t i=0;i<CentersNumber;i++)//寻找最大值的点
@@ -170,7 +186,16 @@ Center find_circle()
 			}
 		}
 	}
+	if(max.confidence<Minconfidence)
+	{
+		max=Last_Center;
+	}
 	max.CentersNumber=CentersNumber;
 	max.Centers=Centers;
+	max.x=filter(&POINTX,max.x);
+	max.y=filter(&POINTY,max.y);
+	max.speedx=max.x-Last_Center.x;//filter(&SPEEDX,max.x-Last_Center.x);
+	max.speedy=max.y-Last_Center.y;//filter(&SPEEDY,max.y-Last_Center.y);
+	Last_Center=max;
 	return max;
 }

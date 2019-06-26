@@ -11,11 +11,8 @@
 #include "LCD.h"
 #include "pid.h"
 
-
 xSemaphoreHandle xSemaphorezz;
-
-PID_IncTypeDef pid1, pid2;
-
+static PID_IncTypeDef SpeedPIDX, SpeedPIDY,AngelPIDX,AngelPIDY;	
 
 void SystemClock_Config(void)
 {
@@ -55,20 +52,6 @@ void SystemClock_Config(void)
   // Enables the Clock Security System 
   HAL_RCC_EnableCSS();
 }
-void IRQHandleTask()
-{
-
-	
-	
-	while(1){
-		xSemaphoreTake(xSemaphorezz, portMAX_DELAY);
-
-		OV2640_FrameReady();
-
-	}
-	
-}
-
 void Task()
 {
 	float A=0,B=0;
@@ -97,120 +80,126 @@ void Task()
 	}
 
 }
-#define GRAY_BACKGROUND
-//#define VOTE_POINT
-#define TRACT
-#define CONFIDENCE
-
-void calu(Center p){
-
-	static float v1 = 90, v2 = 90;
-	
-	static unsigned char str[20];
-
-	LCD_Set_Window(0,0,240,320);
-	
-	sprintf(str, "x:%3d y:%3d", p.x, p.y);
-	LCD_ShowString(100, 300, 100, 50, 16, str);
-
-	v1 += PID_Inc(115, p.x, &pid1);
-	v2 += PID_Inc(120, p.y, &pid2);
-	
-	if(v1 < 0){
-		v1 = 0;
-	}
-	if(v1 > 180){
-		v1 = 180;
-	}
-	
-	if(v2 < 0){
-		v2 = 0;
-	}
-	if(v2 > 180){
-		v2 = 180;
-	}
-	
-	sprintf(str, "xcal: %6.2f", v1);
-	LCD_ShowString(100, 275, 100, 50, 16, str);
-	sprintf(str, "ycal: %6.2f", v2);
-	LCD_ShowString(100, 250, 100, 50, 16, str);
-	
-	
-	Moto1_Set(v1);
-//	Moto2_Set(v2);
-	
-}
-
-
-void OV2640_FrameReady(void)
+void PIDUpdate(uint8_t x,uint8_t y,Center p)
 {
+	static float AngleX = 90, AngleY = 90;
+	static float SpeedX = 0,SpeedY=0;
+	static unsigned char str[20];
 	
-	
-	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_1,GPIO_PIN_SET);
-	//转换为灰度图
-	RGB_to_gray();//4.4ms
+	LCD_Scan_Dir(R2L_D2U);
+	LCD_Set_Window(0,0,240,320);
+	POINT_COLOR=0x0000;
+	sprintf((char *)str, "x:%0.1f y:%0.1f", p.x, p.y);
+	LCD_ShowString(0, 0, 100, 50, 16, str);
 
-	//寻找圆心
-	Center p=find_circle();//14ms
-	//画摄像头背景
-	if(p.confidence > 5){
-		calu(p);
+	SpeedX = PID_Inc(x, p.x, &SpeedPIDX);
+	SpeedY = PID_Inc(y, p.y, &SpeedPIDY);
+	
+	sprintf((char *)str, "TSPEED_X: %0.5f", SpeedX);
+	LCD_ShowString(0, 16, 300, 50, 16, str);
+	sprintf((char *)str, "TSPEED_Y: %0.5f", SpeedY);
+	LCD_ShowString(0, 32, 300, 50, 16, str);
+	
+	AngleX =70+ PID_Inc(SpeedX, p.speedx, &AngelPIDX);
+	AngleY =62+ PID_Inc(SpeedY, p.speedy, &AngelPIDY);
+	
+	if(AngleX < 0){
+		AngleX = 0;
+	}
+	if(AngleX > 180){
+		AngleX = 180;
 	}
 	
-
-#ifdef GRAY_BACKGROUND
-	LCD_Set_Window(0,0,IMAGE_W,IMAGE_W);
-	//LCD_SetCursor(0,0);
-	LCD_WriteRAM_Prepare();		//开始写入GRAM
-	for(uint16_t y=0;y<IMAGE_W;y++)//7ms
-		for(uint16_t x=0;x<IMAGE_W;x++)
-			LCD->LCD_RAM=Gray8toGary16(GrayImage[y][x]);
-#else
-	LCD_Fill(0,0,232,232,0x0000);//5.6ms
-#endif
-#ifdef TRACT
-	//画圆心跟踪标记
-	POINT_COLOR=0x7e0;
-	LCD_DrawLine(0,p.y,IMAGE_W,p.y);
-	LCD_DrawLine(p.x,0,p.x,IMAGE_W);
-#endif
-#ifdef VOTE_POINT
-	//画投票点
-	for(uint16_t i=0;i<p.CentersNumber;i++)
+	if(AngleY < 0){
+		AngleY = 0;
+	}
+	if(AngleY > 180){
+		AngleY = 180;
+	}
+	Moto1_Set(AngleX);
+	Moto2_Set(AngleY);
+	
+	sprintf((char *)str, "xcal: %6.2f", AngleX);
+	LCD_ShowString(0, 48, 100, 50, 16, str);
+	sprintf((char *)str, "ycal: %6.2f", AngleY);
+	LCD_ShowString(0, 64, 100, 50, 16, str);	
+	LCD_Scan_Dir(L2R_U2D);
+}
+#define GRAY_BACKGROUND
+#define VOTE_POINT
+//#define TRACT
+#define SPEED
+#define TARGET_POSTION
+#define CONFIDENCE
+#define CX 115
+#define CY 120
+void Task_FrameReady(void)
+{
+	static Center p;
+	uint8_t px=50,py=50;
+	while(1)
 	{
-		uint16_t Color=p.Centers[i].confidence<<13;
-		LCD_Fast_DrawPoint(p.Centers[i].x,p.Centers[i].y,Color);
-	}
-#endif
-#ifdef CONFIDENCE
-	//画信心条
-	uint16_t Conf=p.confidence!=0?p.confidence>20?IMAGE_W:(float)p.confidence/20*IMAGE_W:0;
-	if(Conf<IMAGE_W-1)
-		LCD_Fill(IMAGE_W,Conf,239,IMAGE_W-1,0x0000);
-	if(Conf>2)
-		LCD_Fill(IMAGE_W,0,239,Conf-1,0xffff);
-#endif
-	//LCD_Fast_DrawPoint(p.x,p.y,0x7e0);
-	/*
-	LCD_SetCursor(4,0);
-	LCD_WriteRAM_Prepare();		//开始写入GRAM
-	for(uint16_t y=0;y<IMAGE_W;y++)
-		for(uint16_t x=0;x<IMAGE_W/8;x++)
+		xSemaphoreTake(xSemaphorezz, portMAX_DELAY);
+		HAL_GPIO_WritePin(GPIOA,GPIO_PIN_1,GPIO_PIN_SET);
+		//转换为灰度图
+		RGB_to_gray();//4.4ms
+
+		//寻找圆心
+		p=find_circle(13,3,5);//14ms
+		//计算PID并控制电机
+		PIDUpdate(px,py,p);
+		//画摄像头背景
+	#ifdef GRAY_BACKGROUND
+		LCD_Set_Window(0,0,IMAGE_W,IMAGE_W);
+		//LCD_SetCursor(0,0);
+		LCD_WriteRAM_Prepare();		//开始写入GRAM
+		for(uint16_t y=0;y<IMAGE_W;y++)//7ms
+			for(uint16_t x=0;x<IMAGE_W;x++)
+				LCD->LCD_RAM=Gray8toGary16(GrayImage[y][x]);
+	#else
+		LCD_Fill(0,0,232,232,0x0000);//5.6ms
+	#endif
+	#ifdef TRACT
+		//画圆心跟踪标记
+		POINT_COLOR=0x7e0;
+		LCD_DrawLine(0,p.y,IMAGE_W,p.y);
+		LCD_DrawLine(p.x,0,p.x,IMAGE_W);
+	#endif
+	#ifdef SPEED
+		//画速度矢量
+		POINT_COLOR=0xF800;
+		int ENDX=p.x+p.speedx*10;
+		int ENDY=p.y+p.speedy*10;
+		if(ENDX>235) ENDX=235;
+		else if(ENDX<5) ENDX=5;
+		if(ENDY>235) ENDY=235;
+		else if(ENDY<5) ENDY=5;
+		LCD_DrawLine(p.x,p.y,ENDX,ENDY);
+	#endif
+	#ifdef TARGET_POSTION
+		//画目标点
+		POINT_COLOR=LCD_RGB_24_2_565(0x66,0xcc,0xff);
+		LCD_Draw_Circle(px,py,13);
+	#endif
+	#ifdef VOTE_POINT
+		//画投票点
+		for(uint16_t i=0;i<p.CentersNumber;i++)
 		{
-			uint8_t imagepart=TowValueImage[y][x];
-			for(int indexx=7;indexx>=0;indexx--)
-			{
-				LCD->LCD_RAM=(imagepart&(1<<indexx))?0xffff:0;
-			}
+			uint16_t Color=p.Centers[i].confidence<<13;
+			LCD_Fast_DrawPoint(p.Centers[i].x,p.Centers[i].y,Color);
 		}
-*/
-	/*
-	for(uint16_t y=0;y<IMAGE_W;y++)//7ms
-		for(uint16_t x=0;x<IMAGE_W;x++)
-			LCD->LCD_RAM=Gray8toGary16(GrayImage[y][x]);
-			*/
-	//OV2640_OutStart((uint32_t)&LCD->LCD_RAM, 1);//启动传输
-	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_1,GPIO_PIN_RESET);
+	#endif
+	#ifdef CONFIDENCE
+		//画信心条
+		POINT_COLOR=LCD_RGB_24_2_565(0xFF,0xFF,0x00);
+		uint16_t Conf=p.confidence!=0?p.confidence>20?IMAGE_W:(float)p.confidence/20*IMAGE_W:0;
+		if(Conf<IMAGE_W-1)
+			LCD_Fill(IMAGE_W,Conf,239,IMAGE_W-1,0x0000);
+		if(Conf>2)
+			LCD_Fill(IMAGE_W,0,239,Conf-1,POINT_COLOR);
+	#endif
+		HAL_GPIO_WritePin(GPIOA,GPIO_PIN_1,GPIO_PIN_RESET);
+	}
 }
 
 int main ()
@@ -249,19 +238,20 @@ int main ()
 //	vSemaphoreCreateBinary(xSemaphorezz);
 	xSemaphorezz = xSemaphoreCreateCounting(10, 0);
 	
-	PID_Init(&pid1);
-	PID_Init(&pid2);
-	PID_Set_Value(&pid1, 0.1, 0, 0);
-	PID_Set_Value(&pid2, 0.1, 0, 0);
-	Moto1_Set(90);
-	Moto2_Set(90);
-	if( xSemaphorezz != NULL ){
-
-		xTaskCreate((TaskFunction_t)IRQHandleTask,"keyscan",300,NULL,3,NULL);
+	PID_Init(&SpeedPIDX);
+	PID_Init(&SpeedPIDY);
+	PID_Set_Value(&SpeedPIDX, 0.052, -0.006, 0.01);
+	PID_Set_Value(&SpeedPIDY, 0.052, -0.006, 0.01);
+	PID_Init(&AngelPIDX);
+	PID_Init(&AngelPIDY);
+	PID_Set_Value(&AngelPIDX, 7, 0, 1);
+	PID_Set_Value(&AngelPIDY, 7, 0, 1);
+	Moto1_Set(70);
+	Moto2_Set(65);
+	if( xSemaphorezz != NULL )
+	{
+		xTaskCreate((TaskFunction_t)Task_FrameReady,"keyscan",300,NULL,3,NULL);
 //		xTaskCreate((TaskFunction_t)Task,"keyscan",300,NULL,1,NULL);
 		vTaskStartScheduler();		
-	
 	}
-	while(1);
-
 }
