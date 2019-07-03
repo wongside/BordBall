@@ -84,24 +84,24 @@ void PIDUpdate(uint8_t x,uint8_t y,Center p)
 {
 	static float AngleX = 90, AngleY = 90;
 	static float SpeedX = 0,SpeedY=0;
-	static unsigned char str[20];
+	static unsigned char str[40];
 	
 	LCD_Scan_Dir(R2L_D2U);
 	LCD_Set_Window(0,0,240,320);
 	POINT_COLOR=0x0000;
 	sprintf((char *)str, "x:%0.1f y:%0.1f", p.x, p.y);
-	LCD_ShowString(0, 0, 100, 50, 16, str);
+	LCD_ShowString(0, 0, 120, 50, 16, str);
 
 	SpeedX = PID_Inc(x, p.x, &SpeedPIDX);
 	SpeedY = PID_Inc(y, p.y, &SpeedPIDY);
 	
-	sprintf((char *)str, "TSPEED_X: %0.5f", SpeedX);
+	sprintf((char *)str, "TS_X: %0.1fP:%0.1fI:%0.1fD:%0.1f", SpeedX,SpeedPIDX.Ek,SpeedPIDX.Ek1,SpeedPIDX.Ek2);
 	LCD_ShowString(0, 16, 300, 50, 16, str);
-	sprintf((char *)str, "TSPEED_Y: %0.5f", SpeedY);
+	sprintf((char *)str, "TS_Y: %0.1fP:%0.1fI:%0.1fD:%0.1f", SpeedY,SpeedPIDY.Ek,SpeedPIDY.Ek1,SpeedPIDY.Ek2);
 	LCD_ShowString(0, 32, 300, 50, 16, str);
 	
 	AngleX =70+ PID_Inc(SpeedX, p.speedx, &AngelPIDX);
-	AngleY =60+ PID_Inc(SpeedY, p.speedy, &AngelPIDY);
+	AngleY =67+ PID_Inc(SpeedY, p.speedy, &AngelPIDY);
 	
 	if(AngleX < 0){
 		AngleX = 0;
@@ -125,29 +125,64 @@ void PIDUpdate(uint8_t x,uint8_t y,Center p)
 	LCD_ShowString(0, 64, 100, 50, 16, str);	
 	LCD_Scan_Dir(L2R_U2D);
 }
+void get_circular(uint8_t* outx,uint8_t* outy,uint8_t x,uint8_t y,uint8_t r,float rad)
+{
+	float K=sinf(rad);
+	*outy=K*r+y;
+	K=cosf(rad);
+	*outx=K*r+x;
+}
+#define CX 115
+#define CY 120
+uint8_t px=CX,py=CY;
+void Task_ChangePosition()
+{
+	while(1)
+	{
+		px=50;
+		py=50;
+		vTaskDelay(4000);
+		px=50;
+		py=150;
+		vTaskDelay(4000);
+		px=150;
+		py=50;
+		vTaskDelay(4000);
+		px=150;
+		py=150;
+		vTaskDelay(4000);
+		px=CX;
+		py=CY;
+		vTaskDelay(4000);
+	}
+}
 #define GRAY_BACKGROUND
 #define VOTE_POINT
 #define TRACT
 #define SPEED
 #define TARGET_POSTION
 #define CONFIDENCE
-#define CX 115
-#define CY 120
 void Task_FrameReady(void)
 {
 	static Center p;
-	uint8_t px=CX,py=CY;
+	float rad=0;
 	while(1)
 	{
 		xSemaphoreTake(xSemaphorezz, portMAX_DELAY);
 		HAL_GPIO_WritePin(GPIOA,GPIO_PIN_1,GPIO_PIN_SET);
 		//转换为灰度图
 		RGB_to_gray();//4.4ms
-
 		//寻找圆心
 		p=find_circle(13,3,5);//14ms
+		//计算目标位置
+//		get_circular(&px,&py,CX,CY,50,rad);
+//		rad+=0.05f;
+//		if(rad>6.2831f)
+//			rad=0;
 		//计算PID并控制电机
 		PIDUpdate(px,py,p);
+		
+		
 		//画摄像头背景
 	#ifdef GRAY_BACKGROUND
 		LCD_Set_Window(0,0,IMAGE_W,IMAGE_W);
@@ -240,18 +275,20 @@ int main ()
 	
 	PID_Init(&SpeedPIDX);
 	PID_Init(&SpeedPIDY);
-	PID_Set_Value(&SpeedPIDX, 0.012, -0.011, 0.035);
-	PID_Set_Value(&SpeedPIDY, 0.012, -0.011, 0.035);
+	PID_Set_Value(&SpeedPIDX, 0.045, 0, 0.25);
+	PID_Set_Value(&SpeedPIDY, 0.045, 0, 0.25);
+//	PID_Set_Value(&SpeedPIDX, 0.065, 0, 0.085);
+//	PID_Set_Value(&SpeedPIDY, 0.065, 0, 0.085);
 	PID_Init(&AngelPIDX);
 	PID_Init(&AngelPIDY);
-	PID_Set_Value(&AngelPIDX, 7.2, 0, 2.5);
-	PID_Set_Value(&AngelPIDY, 7.2, 0, 2.5);
+	PID_Set_Value(&AngelPIDX, 4, -0.11, 1.9);
+	PID_Set_Value(&AngelPIDY, 4, -0.11, 1.9);
 	Moto1_Set(70);
-	Moto2_Set(60);
+	Moto2_Set(67);
 	if( xSemaphorezz != NULL )
 	{
-		xTaskCreate((TaskFunction_t)Task_FrameReady,"keyscan",300,NULL,3,NULL);
-//		xTaskCreate((TaskFunction_t)Task,"keyscan",300,NULL,1,NULL);
+		xTaskCreate((TaskFunction_t)Task_FrameReady,"keyscan",300,NULL,1,NULL);
+		xTaskCreate((TaskFunction_t)Task_ChangePosition,"keyscan",300,NULL,1,NULL);
 		vTaskStartScheduler();		
 	}
 }

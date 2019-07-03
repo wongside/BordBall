@@ -7,6 +7,7 @@ typedef struct
   float Ki;
   float Kd;
 
+	float LastEK;
   float Ek;
   float Ek1;
   float Ek2;
