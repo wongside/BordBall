@@ -28,11 +28,11 @@ void RGB_to_gray()
 #define BN 4 //滤波数组大小
 typedef struct filterstr
 {
-	int buffer[BN];
-	int* pbuffer;
+	float buffer[BN];
+	float* pbuffer;
 	bool FLAG_Begin;
 }filterstr;
-int filter(filterstr * filterpar,int value)
+float filter(filterstr * filterpar,int value)
 {
 	static bool FLAG_Begin = false;
 	*filterpar->pbuffer = value;
@@ -44,7 +44,7 @@ int filter(filterstr * filterpar,int value)
 	else
 		filterpar->pbuffer++;
 	int Max = -1000, Min = 1000;
-	int Sum = 0;
+	float Sum = 0;
 	if (FLAG_Begin)
 	{
 		for (uint8_t i = 0; i < BN; i++)

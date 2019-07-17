@@ -1,5 +1,5 @@
 #include "stm32f4xx_hal.h"
-
+#include "stm32f407xx.h"
 #include "FreeRTOS.h"
 #include "Task.h"
 #include "event_groups.h"
@@ -9,8 +9,8 @@
 #include "MOTO.h"
 #include "OV2640.h"
 #include "LCD.h"
+#include "TOUCH.h"
 #include "pid.h"
-
 xSemaphoreHandle xSemaphorezz;
 static PID_IncTypeDef SpeedPIDX, SpeedPIDY,AngelPIDX,AngelPIDY;	
 
@@ -78,30 +78,30 @@ void Task()
 			BF=false;
 		vTaskDelay(3);
 	}
-
 }
 void PIDUpdate(uint8_t x,uint8_t y,Center p)
 {
 	static float AngleX = 90, AngleY = 90;
 	static float SpeedX = 0,SpeedY=0;
-	static unsigned char str[40];
+	static unsigned char str[50];
 	
 	LCD_Scan_Dir(R2L_D2U);
 	LCD_Set_Window(0,0,240,320);
 	POINT_COLOR=0x0000;
-	sprintf((char *)str, "x:%0.1f y:%0.1f", p.x, p.y);
-	LCD_ShowString(0, 0, 120, 50, 16, str);
+	
+//	sprintf((char *)str, "x:%0.1f y:%0.1f", p.x, p.y);
+//	LCD_ShowString(0, 0, 120, 50, 16, str);
 
 	SpeedX = PID_Inc(x, p.x, &SpeedPIDX);
 	SpeedY = PID_Inc(y, p.y, &SpeedPIDY);
 	
-	sprintf((char *)str, "TS_X: %0.1fP:%0.1fI:%0.1fD:%0.1f", SpeedX,SpeedPIDX.Ek,SpeedPIDX.Ek1,SpeedPIDX.Ek2);
-	LCD_ShowString(0, 16, 300, 50, 16, str);
-	sprintf((char *)str, "TS_Y: %0.1fP:%0.1fI:%0.1fD:%0.1f", SpeedY,SpeedPIDY.Ek,SpeedPIDY.Ek1,SpeedPIDY.Ek2);
-	LCD_ShowString(0, 32, 300, 50, 16, str);
+//	sprintf((char *)str, "TS_X: %0.1fP:%0.1fI:%0.1fD:%0.1f", SpeedX,SpeedPIDX.Ek,SpeedPIDX.Ek1,SpeedPIDX.Ek2);
+//	LCD_ShowString(0, 16, 300, 50, 16, str);
+//	sprintf((char *)str, "TS_Y: %0.1fP:%0.1fI:%0.1fD:%0.1f", SpeedY,SpeedPIDY.Ek,SpeedPIDY.Ek1,SpeedPIDY.Ek2);
+//	LCD_ShowString(0, 32, 300, 50, 16, str);
 	
 	AngleX =70+ PID_Inc(SpeedX, p.speedx, &AngelPIDX);
-	AngleY =67+ PID_Inc(SpeedY, p.speedy, &AngelPIDY);
+	AngleY =59+ PID_Inc(SpeedY, p.speedy, &AngelPIDY);
 	
 	if(AngleX < 0){
 		AngleX = 0;
@@ -116,13 +116,29 @@ void PIDUpdate(uint8_t x,uint8_t y,Center p)
 	if(AngleY > 180){
 		AngleY = 180;
 	}
+	static float LastAngleX=0;
+	static float LastAngleY=0;
+	AngleX=LastAngleX*0.6f+AngleX*0.4f;
+	AngleY=LastAngleY*0.6f+AngleY*0.4f;
+	LastAngleX=AngleX;
+	LastAngleY=AngleY;
 	Moto1_Set(AngleX);
 	Moto2_Set(AngleY);
 	
-	sprintf((char *)str, "xcal: %6.2f", AngleX);
-	LCD_ShowString(0, 48, 100, 50, 16, str);
-	sprintf((char *)str, "ycal: %6.2f", AngleY);
-	LCD_ShowString(0, 64, 100, 50, 16, str);	
+	static uint8_t drawx=0;
+	LCD_Fast_DrawPoint(drawx,AngleX/180*32,0xffff);
+	LCD_Fast_DrawPoint(drawx,AngleY/180*32+32,0xffff);
+	drawx++;
+	if(drawx==240)
+	{
+		drawx=0;
+		LCD_Fill(0,0,239,64,0);
+	}
+	
+//	sprintf((char *)str, "xcal: %6.2f", AngleX);
+//	LCD_ShowString(0, 48, 100, 50, 16, str);
+//	sprintf((char *)str, "ycal: %6.2f", AngleY);
+//	LCD_ShowString(0, 64, 100, 50, 16, str);	
 	LCD_Scan_Dir(L2R_U2D);
 }
 void get_circular(uint8_t* outx,uint8_t* outy,uint8_t x,uint8_t y,uint8_t r,float rad)
@@ -170,24 +186,24 @@ void Task_FrameReady(void)
 	{
 		xSemaphoreTake(xSemaphorezz, portMAX_DELAY);
 		HAL_GPIO_WritePin(GPIOA,GPIO_PIN_1,GPIO_PIN_SET);
-		//◊™ªªŒ™ª“∂»Õº
+		//ËΩ¨Êç¢‰∏∫ÁÅ∞Â∫¶Âõæ
 		RGB_to_gray();//4.4ms
-		//—∞’“‘≤–ƒ
+		//ÂØªÊâæÂúÜÂøÉ
 		p=find_circle(13,3,5);//14ms
-		//º∆À„ƒø±ÍŒª÷√
+		//ËÆ°ÁÆóÁõÆÊ†á‰ΩçÁΩÆ
 //		get_circular(&px,&py,CX,CY,50,rad);
 //		rad+=0.05f;
 //		if(rad>6.2831f)
 //			rad=0;
-		//º∆À„PID≤¢øÿ÷∆µÁª˙
+		//ËÆ°ÁÆóPIDÂπ∂ÊéßÂà∂ÁîµÊú∫
 		PIDUpdate(px,py,p);
 		
 		
-		//ª≠…„œÒÕ∑±≥æ∞
+		//ÁîªÊëÑÂÉèÂ§¥ËÉåÊôØ
 	#ifdef GRAY_BACKGROUND
 		LCD_Set_Window(0,0,IMAGE_W,IMAGE_W);
 		//LCD_SetCursor(0,0);
-		LCD_WriteRAM_Prepare();		//ø™ º–¥»ÎGRAM
+		LCD_WriteRAM_Prepare();		//ÂºÄÂßãÂÜôÂÖ•GRAM
 		for(uint16_t y=0;y<IMAGE_W;y++)//7ms
 			for(uint16_t x=0;x<IMAGE_W;x++)
 				LCD->LCD_RAM=Gray8toGary16(GrayImage[y][x]);
@@ -195,13 +211,13 @@ void Task_FrameReady(void)
 		LCD_Fill(0,0,232,232,0x0000);//5.6ms
 	#endif
 	#ifdef TRACT
-		//ª≠‘≤–ƒ∏˙◊Ÿ±Íº«
+		//ÁîªÂúÜÂøÉË∑üË∏™Ê†áËÆ∞
 		POINT_COLOR=0x7e0;
 		LCD_DrawLine(0,p.y,IMAGE_W,p.y);
 		LCD_DrawLine(p.x,0,p.x,IMAGE_W);
 	#endif
 	#ifdef SPEED
-		//ª≠ÀŸ∂» ∏¡ø
+		//ÁîªÈÄüÂ∫¶Áü¢Èáè
 		POINT_COLOR=0xF800;
 		int ENDX=p.x+p.speedx*10;
 		int ENDY=p.y+p.speedy*10;
@@ -212,12 +228,12 @@ void Task_FrameReady(void)
 		LCD_DrawLine(p.x,p.y,ENDX,ENDY);
 	#endif
 	#ifdef TARGET_POSTION
-		//ª≠ƒø±Íµ„
+		//ÁîªÁõÆÊ†áÁÇπ
 		POINT_COLOR=LCD_RGB_24_2_565(0x66,0xcc,0xff);
 		LCD_Draw_Circle(px,py,13);
 	#endif
 	#ifdef VOTE_POINT
-		//ª≠Õ∂∆±µ„
+		//ÁîªÊäïÁ•®ÁÇπ
 		for(uint16_t i=0;i<p.CentersNumber;i++)
 		{
 			uint16_t Color=p.Centers[i].confidence<<13;
@@ -225,7 +241,7 @@ void Task_FrameReady(void)
 		}
 	#endif
 	#ifdef CONFIDENCE
-		//ª≠–≈–ƒÃı
+		//Áîª‰ø°ÂøÉÊù°
 		POINT_COLOR=LCD_RGB_24_2_565(0xFF,0xFF,0x00);
 		uint16_t Conf=p.confidence!=0?p.confidence>20?IMAGE_W:(float)p.confidence/20*IMAGE_W:0;
 		if(Conf<IMAGE_W-1)
@@ -236,31 +252,44 @@ void Task_FrameReady(void)
 		HAL_GPIO_WritePin(GPIOA,GPIO_PIN_1,GPIO_PIN_RESET);
 	}
 }
-
 int main ()
 {
 	uint16_t mai;
 	HAL_Init();
 	SystemClock_Config();
-	
+	uint16_t tx,ty;
 	LCD_Init();
+	//Touch_init();
+	
+//	LCD_Display_Dir(0);
+//	LCD_Scan_Dir(R2L_D2U);
+//	while(GetTouch(&tx,&ty))
+//	{
+//		char str[20];
+//		sprintf((char *)str, "tx:%d  ", tx);
+//		LCD_ShowString(0, 64, 200, 50, 16, (uint8_t*)str);
+//		sprintf((char *)str, "ty:%d   ",ty);
+//		LCD_ShowString(0, 80, 200, 50, 16, (uint8_t*)str);	
+//	}
+//	while(1);
+	
 	OV2640_Init();
 	Moto_Init();
 	
 	LCD_Display_Dir(0);
 	LCD_Scan_Dir(L2R_U2D);
 	OV2640_LED(0);
-	OV2640_RGB565_Mode();	//RGB565ƒ£ Ω
+	OV2640_RGB565_Mode();	//RGB565Ê®°Âºè
 	//OV2640_Window_Set(0,0,800,600);
 	OV2640_ImageSize_Set(800,600);
 	OV2640_ImageWin_Set(200,0,600,600);
 	OV2640_OutSize_Set(IMAGE_W,IMAGE_W);
 	//LCD_Set_Window(0,0,IMAGE_W,IMAGE_W);
 
-	//OV2640_DMAOutput(DMA_MDATAALIGN_WORD, DMA_MINC_DISABLE); //DCMI DMA≈‰÷√
-	//OV2640_OutStart((uint32_t)&LCD->LCD_RAM, 1); 		//∆Ù∂Ø¥´ ‰
-	OV2640_DMAOutput(DMA_MDATAALIGN_WORD, DMA_MINC_ENABLE); //DCMI DMA≈‰÷√
-	OV2640_OutStart((uint32_t)RGBYUVImage,26912); 		//∆Ù∂Ø¥´ ‰
+	//OV2640_DMAOutput(DMA_MDATAALIGN_WORD, DMA_MINC_DISABLE); //DCMI DMAÈÖçÁΩÆ
+	//OV2640_OutStart((uint32_t)&LCD->LCD_RAM, 1); 		//ÂêØÂä®‰º†Ëæì
+	OV2640_DMAOutput(DMA_MDATAALIGN_WORD, DMA_MINC_ENABLE); //DCMI DMAÈÖçÁΩÆ
+	OV2640_OutStart((uint32_t)RGBYUVImage,26912); 		//ÂêØÂä®‰º†Ëæì
 	//OV2640_LED(1);
 	
 	__HAL_RCC_GPIOA_CLK_ENABLE();
@@ -275,16 +304,14 @@ int main ()
 	
 	PID_Init(&SpeedPIDX);
 	PID_Init(&SpeedPIDY);
-	PID_Set_Value(&SpeedPIDX, 0.045, 0, 0.25);
-	PID_Set_Value(&SpeedPIDY, 0.045, 0, 0.25);
-//	PID_Set_Value(&SpeedPIDX, 0.065, 0, 0.085);
-//	PID_Set_Value(&SpeedPIDY, 0.065, 0, 0.085);
+	PID_Set_Value(&SpeedPIDX, 0.045, 0, 0.20);
+	PID_Set_Value(&SpeedPIDY, 0.045, 0, 0.20);
 	PID_Init(&AngelPIDX);
 	PID_Init(&AngelPIDY);
-	PID_Set_Value(&AngelPIDX, 4, -0.11, 1.9);
-	PID_Set_Value(&AngelPIDY, 4, -0.11, 1.9);
+	PID_Set_Value(&AngelPIDX, 5, -0.11, 2.7);
+	PID_Set_Value(&AngelPIDY, 5, -0.11, 2.7);
 	Moto1_Set(70);
-	Moto2_Set(67);
+	Moto2_Set(75);
 	if( xSemaphorezz != NULL )
 	{
 		xTaskCreate((TaskFunction_t)Task_FrameReady,"keyscan",300,NULL,1,NULL);
