@@ -7,7 +7,7 @@ void Error_Handler()
 }
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef* htim)
 {
-	//设置PWM输出引脚
+	//璁剧疆PWM杈撳嚭寮曡剼
   GPIO_InitTypeDef GPIO_InitStruct = {0};
 	__HAL_RCC_GPIOA_CLK_ENABLE();
 	/**TIM2 GPIO Configuration    
@@ -26,7 +26,7 @@ static void MX_TIM2_Init(void)
   TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
   TIM_OC_InitTypeDef sConfigOC = {0};
-	//启动时钟
+	//鍚姩鏃堕挓
 	__HAL_RCC_TIM2_CLK_ENABLE();
 	__HAL_RCC_GPIOA_CLK_ENABLE();
 	
