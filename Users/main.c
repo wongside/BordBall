@@ -52,7 +52,7 @@ void SystemClock_Config(void)
   // Enables the Clock Security System 
   HAL_RCC_EnableCSS();
 }
-void Task()
+void Task_MotoTest()
 {
 	float A=0,B=0;
 	bool AF=false,BF=false;
@@ -79,21 +79,21 @@ void Task()
 		vTaskDelay(3);
 	}
 }
-void PIDUpdate(uint8_t x,uint8_t y,Center p)
+void PIDUpdate(point targetpoint,Center p)
 {
 	static float AngleX = 90, AngleY = 90;
 	static float SpeedX = 0,SpeedY=0;
 	static unsigned char str[50];
 	
-	LCD_Scan_Dir(R2L_D2U);
-	LCD_Set_Window(0,0,240,320);
-	POINT_COLOR=0x0000;
+//	LCD_Scan_Dir(R2L_D2U);
+//	LCD_Set_Window(0,0,240,320);
+//	POINT_COLOR=0x0000;
 	
 //	sprintf((char *)str, "x:%0.1f y:%0.1f", p.x, p.y);
 //	LCD_ShowString(0, 0, 120, 50, 16, str);
 
-	SpeedX = PID_Inc(x, p.x, &SpeedPIDX);
-	SpeedY = PID_Inc(y, p.y, &SpeedPIDY);
+	SpeedX = PID_Inc(targetpoint.x, p.x, &SpeedPIDX);
+	SpeedY = PID_Inc(targetpoint.y, p.y, &SpeedPIDY);
 	
 //	sprintf((char *)str, "TS_X: %0.1fP:%0.1fI:%0.1fD:%0.1f", SpeedX,SpeedPIDX.Ek,SpeedPIDX.Ek1,SpeedPIDX.Ek2);
 //	LCD_ShowString(0, 16, 300, 50, 16, str);
@@ -126,20 +126,94 @@ void PIDUpdate(uint8_t x,uint8_t y,Center p)
 	Moto2_Set(AngleY);
 	
 	static uint8_t drawx=0;
-	LCD_Fast_DrawPoint(drawx,AngleX/180*32,0xffff);
-	LCD_Fast_DrawPoint(drawx,AngleY/180*32+32,0xffff);
-	drawx++;
-	if(drawx==240)
-	{
-		drawx=0;
-		LCD_Fill(0,0,239,64,0);
-	}
+//	LCD_Fast_DrawPoint(drawx,AngleX/180*32,0xffff);
+//	LCD_Fast_DrawPoint(drawx,AngleY/180*32+32,0xffff);
+//	drawx++;
+//	if(drawx==240)
+//	{
+//		drawx=0;
+//		LCD_Fill(0,0,239,64,0);
+//	}
 	
 //	sprintf((char *)str, "xcal: %6.2f", AngleX);
 //	LCD_ShowString(0, 48, 100, 50, 16, str);
 //	sprintf((char *)str, "ycal: %6.2f", AngleY);
 //	LCD_ShowString(0, 64, 100, 50, 16, str);	
-	LCD_Scan_Dir(L2R_U2D);
+//	LCD_Scan_Dir(L2R_U2D);
+}
+#define CX 115
+#define CY 120
+static Center p;
+point TargetPoint={CX,CY};
+point Regions[9];
+void Regions_init()
+{
+	for(int i=0;i<3;i++)
+	{
+		for(int j=0;j<3;j++)
+		{
+			Regions[i*3+j].x=50+j*66;
+			Regions[i*3+j].y=50+i*66;
+		}
+	}
+}
+bool isBollInCircular(point tarpoint,float rad)
+{
+	float absx=fabs(p.x-tarpoint.x);
+	float absy=fabs(p.y-tarpoint.y);
+	float r=__sqrtf(absx*absx+absy*absy);
+	if(r<rad) return true;
+	else return false;
+}
+void Task_Mission_2(bool *FLAG_MissionRunning)
+{
+	TargetPoint=Regions[1-1];
+	while(!isBollInCircular(Regions[1-1],20));
+	vTaskDelay(3000);
+	TargetPoint=Regions[5-1];
+	while(!isBollInCircular(Regions[5-1],20));
+	vTaskDelay(3000);
+	FLAG_MissionRunning=false;
+	vTaskDelete(NULL);
+}
+void Task_Mission_3(bool *FLAG_MissionRunning)
+{
+	TargetPoint=Regions[1-1];
+	while(!isBollInCircular(Regions[1-1],20));
+	vTaskDelay(3000);
+	TargetPoint=Regions[4-1];
+	while(!isBollInCircular(Regions[4-1],20));
+	vTaskDelay(3000);
+	TargetPoint=Regions[5-1];
+	while(!isBollInCircular(Regions[5-1],20));
+	vTaskDelay(3000);
+	FLAG_MissionRunning=false;
+	vTaskDelete(NULL);
+}
+void Task_Mission_4(bool *FLAG_MissionRunning)
+{
+	TargetPoint=Regions[1-1];
+	while(!isBollInCircular(Regions[1-1],20));
+	vTaskDelay(3000);
+	TargetPoint=Regions[9-1];
+	while(!isBollInCircular(Regions[9-1],20));
+	vTaskDelay(3000);
+	FLAG_MissionRunning=false;
+	vTaskDelete(NULL);
+}
+void Task_Mission_5(bool *FLAG_MissionRunning)
+{
+	TargetPoint=Regions[1-1];
+	while(!isBollInCircular(Regions[1-1],20));
+	vTaskDelay(3000);
+	TargetPoint=Regions[2-1];
+	while(!isBollInCircular(Regions[2-1],20));
+	vTaskDelay(3000);
+	TargetPoint=Regions[6-1];
+	while(!isBollInCircular(Regions[6-1],20));
+	vTaskDelay(3000);
+	FLAG_MissionRunning=false;
+	vTaskDelete(NULL);
 }
 void get_circular(uint8_t* outx,uint8_t* outy,uint8_t x,uint8_t y,uint8_t r,float rad)
 {
@@ -148,29 +222,30 @@ void get_circular(uint8_t* outx,uint8_t* outy,uint8_t x,uint8_t y,uint8_t r,floa
 	K=cosf(rad);
 	*outx=K*r+x;
 }
-#define CX 115
-#define CY 120
-uint8_t px=CX,py=CY;
-void Task_ChangePosition()
+void Task_Mission_7(bool *FLAG_MissionRunning)
 {
-	while(1)
+	TargetPoint=Regions[4-1];
+	while(!isBollInCircular(Regions[4-1],20));
+	vTaskDelay(3000);
+	
+	uint8_t count=0;
+	float rad=0;
+	while(count<4)
 	{
-		px=50;
-		py=50;
-		vTaskDelay(4000);
-		px=50;
-		py=150;
-		vTaskDelay(4000);
-		px=150;
-		py=50;
-		vTaskDelay(4000);
-		px=150;
-		py=150;
-		vTaskDelay(4000);
-		px=CX;
-		py=CY;
-		vTaskDelay(4000);
+		get_circular(&TargetPoint.x,&TargetPoint.y,CX,CY,60,rad);
+		rad+=0.002f;
+		vTaskDelay(1);
+		if(rad>6.28f)
+		{
+			rad=0;
+			count++;
+		}
 	}
+	TargetPoint=Regions[9-1];
+	while(!isBollInCircular(Regions[9-1],20));
+	vTaskDelay(3000);
+	FLAG_MissionRunning=false;
+	vTaskDelete(NULL);
 }
 #define GRAY_BACKGROUND
 #define VOTE_POINT
@@ -178,28 +253,9 @@ void Task_ChangePosition()
 #define SPEED
 #define TARGET_POSTION
 #define CONFIDENCE
-void Task_FrameReady(void)
+void Draw()
 {
-	static Center p;
-	float rad=0;
-	while(1)
-	{
-		xSemaphoreTake(xSemaphorezz, portMAX_DELAY);
-		HAL_GPIO_WritePin(GPIOA,GPIO_PIN_1,GPIO_PIN_SET);
-		//转换为灰度图
-		RGB_to_gray();//4.4ms
-		//寻找圆心
-		p=find_circle(13,3,5);//14ms
-		//计算目标位置
-//		get_circular(&px,&py,CX,CY,50,rad);
-//		rad+=0.05f;
-//		if(rad>6.2831f)
-//			rad=0;
-		//计算PID并控制电机
-		PIDUpdate(px,py,p);
-		
-		
-		//画摄像头背景
+	//画摄像头背景
 	#ifdef GRAY_BACKGROUND
 		LCD_Set_Window(0,0,IMAGE_W,IMAGE_W);
 		//LCD_SetCursor(0,0);
@@ -230,7 +286,7 @@ void Task_FrameReady(void)
 	#ifdef TARGET_POSTION
 		//画目标点
 		POINT_COLOR=LCD_RGB_24_2_565(0x66,0xcc,0xff);
-		LCD_Draw_Circle(px,py,13);
+		LCD_Draw_Circle(TargetPoint.x,TargetPoint.y,13);
 	#endif
 	#ifdef VOTE_POINT
 		//画投票点
@@ -249,7 +305,110 @@ void Task_FrameReady(void)
 		if(Conf>2)
 			LCD_Fill(IMAGE_W,0,239,Conf-1,POINT_COLOR);
 	#endif
-		HAL_GPIO_WritePin(GPIOA,GPIO_PIN_1,GPIO_PIN_RESET);
+}
+bool FLAG_NeedDraw=false;
+void OV2640_FrameReady()
+{
+	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_1,GPIO_PIN_SET);
+	//转换为灰度图
+	RGB_to_gray();//4.4ms
+	//寻找圆心
+	p=find_circle(4,2,3);//14ms  4  13
+	//计算PID并控制电机
+	PIDUpdate(TargetPoint,p);
+	FLAG_NeedDraw=true;
+	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_1,GPIO_PIN_RESET);
+}
+const static Rectangle Mission_1rec={0,0,120,40};
+const static Rectangle Mission_2rec={121,0,239,40};
+const static Rectangle Mission_3rec={0,41,120,80};
+const static Rectangle Mission_4rec={121,41,239,80};
+const static Rectangle Mission_5rec={0,81,120,120};
+const static Rectangle Mission_6rec={121,81,239,120};
+const static Rectangle Mission_7rec={0,121,120,160};
+const static Rectangle Mission_8rec={121,121,239,160};
+void Task_ChangePosition(void)
+{
+	uint16_t tx,ty;
+	xTaskHandle MissionHandle;
+	bool FLAG_MissionRunning=false;
+	uint16_t count=0;
+	char str[40];
+	Regions_init();
+	while(1)
+	{
+		LCD_Scan_Dir(R2L_D2U);
+		POINT_COLOR=0;
+		if(!GetTouch(&tx,&ty))//如果没有得到 count++
+		{
+			if(count<21)
+				count++;
+			if(count==20)
+			{
+				if(IsPointInRec(Mission_1rec,tx,ty))
+				{
+					strcpy(str,"mission:1");
+					LCD_ShowString(120, 64, 300, 50, 16, (uint8_t *)str);
+					if(FLAG_MissionRunning) vTaskDelete(MissionHandle);
+					FLAG_MissionRunning=false;
+					TargetPoint=Regions[1];
+				}
+				if(IsPointInRec(Mission_2rec,tx,ty))
+				{
+					LCD_ShowString(120, 64, 300, 50, 16, "mission:2");
+					if(FLAG_MissionRunning) vTaskDelete(MissionHandle);
+					FLAG_MissionRunning=true;
+					xTaskCreate((TaskFunction_t)Task_Mission_2,"Mission_2",200,(void*)&FLAG_MissionRunning,1,&MissionHandle);
+				}
+				if(IsPointInRec(Mission_3rec,tx,ty))
+				{
+					LCD_ShowString(120, 64, 300, 50, 16, "mission:3");
+					if(FLAG_MissionRunning) vTaskDelete(MissionHandle);
+					FLAG_MissionRunning=true;
+					xTaskCreate((TaskFunction_t)Task_Mission_3,"Mission_3",200,(void*)&FLAG_MissionRunning,1,&MissionHandle);
+				}
+				if(IsPointInRec(Mission_4rec,tx,ty))
+				{
+					LCD_ShowString(120, 64, 300, 50, 16, "mission:4");
+					if(FLAG_MissionRunning) vTaskDelete(MissionHandle);
+					FLAG_MissionRunning=true;
+					xTaskCreate((TaskFunction_t)Task_Mission_4,"Mission_4",200,(void*)&FLAG_MissionRunning,1,&MissionHandle);
+				}
+				if(IsPointInRec(Mission_5rec,tx,ty))
+				{
+					LCD_ShowString(120, 64, 300, 50, 16, "mission:5");
+					if(FLAG_MissionRunning) vTaskDelete(MissionHandle);
+					FLAG_MissionRunning=true;
+					xTaskCreate((TaskFunction_t)Task_Mission_5,"Mission_5",200,(void*)&FLAG_MissionRunning,1,&MissionHandle);
+				}
+				if(IsPointInRec(Mission_7rec,tx,ty))
+				{
+					LCD_ShowString(120, 64, 300, 50, 16, "mission:7");
+					if(FLAG_MissionRunning) vTaskDelete(MissionHandle);
+					FLAG_MissionRunning=true;
+					xTaskCreate((TaskFunction_t)Task_Mission_7,"Mission_7",200,(void*)&FLAG_MissionRunning,1,&MissionHandle);
+				}
+			}
+		}
+		else //得到了
+		{
+//x 400~3750 0~3350
+//y 3800~250 3550
+			if(tx<400) tx=400;
+			if(ty<250) ty=250;
+			tx=(tx-400)/14;
+			ty=340-(ty-250)/11.1f;
+			sprintf(str,"x:%d,y:%d     ",tx,ty);
+			LCD_ShowString(0, 64, 300, 50, 16, (uint8_t *)str);
+			count=0;
+		}
+		LCD_Scan_Dir(L2R_U2D);
+		if(FLAG_NeedDraw)
+		{
+			FLAG_NeedDraw=false;
+			Draw();
+		}
+		vTaskDelay(1);
 	}
 }
 int main ()
@@ -257,19 +416,31 @@ int main ()
 	uint16_t mai;
 	HAL_Init();
 	SystemClock_Config();
-	uint16_t tx,ty;
 	LCD_Init();
-	//Touch_init();
+	Touch_init();
 	
+//	uint16_t tx,ty;
 //	LCD_Display_Dir(0);
 //	LCD_Scan_Dir(R2L_D2U);
-//	while(GetTouch(&tx,&ty))
+//	while(1)
 //	{
 //		char str[20];
-//		sprintf((char *)str, "tx:%d  ", tx);
-//		LCD_ShowString(0, 64, 200, 50, 16, (uint8_t*)str);
-//		sprintf((char *)str, "ty:%d   ",ty);
-//		LCD_ShowString(0, 80, 200, 50, 16, (uint8_t*)str);	
+//		if(GetTouch(&tx,&ty))
+//		{
+//			sprintf((char *)str, "tx:%d     ", tx);
+//			LCD_ShowString(0, 64, 200, 50, 16, (uint8_t*)str);
+//			sprintf((char *)str, "ty:%d     ",ty);
+//			LCD_ShowString(0, 80, 200, 50, 16, (uint8_t*)str);
+//		}
+//		else
+//		{
+//			tx=0;
+//			ty=0;
+//			sprintf((char *)str, "tx:%d     ", tx);
+//			LCD_ShowString(0, 64, 200, 50, 16, (uint8_t*)str);
+//			sprintf((char *)str, "ty:%d     ",ty);
+//			LCD_ShowString(0, 80, 200, 50, 16, (uint8_t*)str);
+//		}
 //	}
 //	while(1);
 	
@@ -299,23 +470,19 @@ int main ()
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-//	vSemaphoreCreateBinary(xSemaphorezz);
-	xSemaphorezz = xSemaphoreCreateCounting(10, 0);
 	
 	PID_Init(&SpeedPIDX);
 	PID_Init(&SpeedPIDY);
-	PID_Set_Value(&SpeedPIDX, 0.045, 0, 0.20);
-	PID_Set_Value(&SpeedPIDY, 0.045, 0, 0.20);
+	PID_Set_Value(&SpeedPIDX, 0.065, 0.01, 0.36);
+	PID_Set_Value(&SpeedPIDY, 0.065, 0.01, 0.36);
 	PID_Init(&AngelPIDX);
 	PID_Init(&AngelPIDY);
-	PID_Set_Value(&AngelPIDX, 5, -0.11, 2.7);
-	PID_Set_Value(&AngelPIDY, 5, -0.11, 2.7);
+	PID_Set_Value(&AngelPIDX, 4, 0, 2.7);
+	PID_Set_Value(&AngelPIDY, 4, 0, 2.7);
 	Moto1_Set(70);
 	Moto2_Set(75);
-	if( xSemaphorezz != NULL )
-	{
-		xTaskCreate((TaskFunction_t)Task_FrameReady,"keyscan",300,NULL,1,NULL);
-		xTaskCreate((TaskFunction_t)Task_ChangePosition,"keyscan",300,NULL,1,NULL);
-		vTaskStartScheduler();		
-	}
+	
+	//xTaskCreate((TaskFunction_t)Task_FrameReady,"keyscan",300,NULL,2,NULL);
+	xTaskCreate((TaskFunction_t)Task_ChangePosition,"keyscan",400,NULL,1,NULL);
+	vTaskStartScheduler();
 }

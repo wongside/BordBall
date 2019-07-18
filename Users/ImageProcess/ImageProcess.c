@@ -76,7 +76,7 @@ Gradient Sobel_Gradient(uint8_t x,uint8_t y)
 	//G.lenth=sqrt(X*X+Y*Y);//18ms
 	//G.lenth=_sqrt(X*X+Y*Y);//18ms
 	//G.lenth=(abs(Y)+abs(X));//3.2ms
-	if(G.lenth>220)
+	if(G.lenth>200)
 	{
 		G.X=X;
 		G.Y=Y;

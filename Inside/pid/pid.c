@@ -5,11 +5,12 @@ float PID_Inc(float SetValue, float ActualValue, PID_IncTypeDef *PID)
   float PIDInc;
  
   PID->Ek = SetValue - ActualValue;
-  PIDInc = (PID->Kp * PID->Ek) - PID->Ek1 - (PID->Kd * PID->Ek2);
+  PIDInc = (PID->Kp * PID->Ek) + PID->Ek1 - (PID->Kd * PID->Ek2);
  
   PID->Ek2 = PID->LastEK-PID->Ek;
 	PID->LastEK=PID->Ek;
   PID->Ek1 += PID->Ki *PID->Ek;
+	if(PID->Ek<1) PID->Ek1=0;
 	if(PID->Ek1>1.3f)PID->Ek1=1.3f;
 	else if(PID->Ek1<-1.3f)PID->Ek1=-1.3f;
 
