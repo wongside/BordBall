@@ -24,33 +24,37 @@ uint16_t GetADC(bool isx)
 	while(t--)
 	{
 		HAL_GPIO_WritePin(GPIOB,GPIO_PIN_12,GPIO_PIN_RESET);
-		if(HAL_SPI_Transmit(&hspi2,&txdata,1,300)!=HAL_OK)
-			error++;
-		if(HAL_SPI_Receive(&hspi2,&rxdata,1,300)!=HAL_OK)
-			error++;
+		HAL_SPI_Transmit(&hspi2,&txdata,1,300);
+		
+		HAL_SPI_Receive(&hspi2,&rxdata,1,300);
 		buffer=rxdata<<8;
-		if(HAL_SPI_Receive(&hspi2,&rxdata,1,300)!=HAL_OK)
-			error++;
+		
+		HAL_SPI_Receive(&hspi2,&rxdata,1,300);
 		HAL_GPIO_WritePin(GPIOB,GPIO_PIN_12,GPIO_PIN_SET);
 		buffer|=rxdata;
 		buffer>>=3;
+		
 		value[t]=buffer;
-		//HAL_Delay(10);
 	}
 	t=time;
 	while((t--)>1)
 	{
 		xyerror+=abs(value[t]-value[t-1]);
 	}
-	return xyerror>60?0:(value[0]+value[1]+value[2]+value[3])/4;
+	return xyerror>100?0:(value[0]+value[1]+value[2]+value[3])/4;
 }
 bool GetTouch(uint16_t *x,uint16_t *y)
 {
 	uint16_t tx=GetADC(true);
 	uint16_t ty=GetADC(false);
-	*x=tx?tx:*x;
-	*y=ty?ty:*y;
-	return true;
+	if(ty<4000 && ty>300)
+	{
+		*x=tx?tx:*x;
+		*y=ty?ty:*y;
+		return true;
+	}
+	else
+		return false;
 }
 bool Touch_init()
 {
@@ -84,7 +88,7 @@ bool Touch_init()
 	hspi2.Init.CLKPolarity = SPI_POLARITY_HIGH;
 	hspi2.Init.CLKPhase = SPI_PHASE_2EDGE;
 	hspi2.Init.NSS = SPI_NSS_HARD_OUTPUT;
-	hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_256;
+	hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32;
 	hspi2.Init.FirstBit = SPI_FIRSTBIT_MSB;
 	hspi2.Init.TIMode = SPI_TIMODE_DISABLE;
 	hspi2.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;

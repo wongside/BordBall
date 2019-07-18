@@ -2,6 +2,7 @@
 #define __LCD_H_
 #include "stm32f4xx_hal.h"
 #include "stdint.h"
+#include "stdbool.h"
 //LCD重要参数集
 typedef struct
 {
@@ -77,7 +78,16 @@ extern volatile LCD_TypeDef * LCD;
 #define LGRAY				0XC618 //浅灰色(PANNEL),窗体背景色
 #define LGRAYBLUE		0XA651 //浅灰蓝色(中间层颜色)
 #define LBBLUE			0X2B12 //浅棕蓝色(选择条目的反色)
-	    															  
+
+typedef struct Rectangle
+{
+	int Xs;
+	int Ys;
+	int Xe;
+	int Ye;
+	uint16_t RECTANGLE_COLOR;
+} Rectangle;
+
 void LCD_Init(void);							//初始化
 void LCD_DisplayOn(void);					//开显示
 void LCD_DisplayOff(void);				//关显示
@@ -105,5 +115,7 @@ void LCD_WriteRAM_Prepare(void);
 void LCD_WriteRAM(uint16_t RGB_Code);		  
 void LCD_Scan_Dir(uint8_t dir);			//设置屏扫描方向
 void LCD_Display_Dir(uint8_t dir);	//设置屏幕显示方向
-void LCD_Set_Window(uint16_t sx,uint16_t sy,uint16_t width,uint16_t height);//设置窗口					   																			 
+void LCD_Set_Window(uint16_t sx,uint16_t sy,uint16_t width,uint16_t height);//设置窗口			
+
+bool IsPointInRec(Rectangle rec, uint16_t x, uint16_t y);
 #endif

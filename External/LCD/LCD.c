@@ -503,6 +503,10 @@ void LCD_Init(void)
 	LCD_BL_ON;//点亮背光
 	LCD_Clear(0xf800);
 }
+bool IsPointInRec(Rectangle rec, uint16_t x, uint16_t y)
+{
+	return (x > rec.Xs && x < rec.Xe && y > rec.Ys && y < rec.Ye);
+}
 //清屏函数
 //color:要清屏的填充色
 void LCD_Clear(uint16_t color)
@@ -627,7 +631,7 @@ void LCD_Draw_Circle(uint16_t x0,uint16_t y0,uint8_t r)
 //mode:叠加方式(1)还是非叠加方式(0)
 void LCD_ShowChar(uint16_t x,uint16_t y,uint8_t num,uint8_t size,uint8_t mode)
 {  							  
-    uint8_t temp,t1,t;
+  uint8_t temp,t1,t;
 	uint16_t y0=y;
 	uint8_t csize=(size/8+((size%8)?1:0))*(size/2);		//得到字体一个字符对应点阵集所占的字节数	
 	//设置窗口		   
@@ -652,8 +656,8 @@ void LCD_ShowChar(uint16_t x,uint16_t y,uint8_t num,uint8_t size,uint8_t mode)
 				if(x>=lcddev.width)return;	//超区域了
 				break;
 			}
-		}  	 
-	}  	    	   	 	  
+		}
+	}
 }   
 //m^n函数
 //返回值:m^n次方.
@@ -727,12 +731,12 @@ void LCD_ShowString(uint16_t x,uint16_t y,uint16_t width,uint16_t height,uint8_t
 	uint8_t x0=x;
 	width+=x;
 	height+=y;
-    while((*p<='~')&&(*p>=' '))//判断是不是非法字符!
-    {       
-        if(x>=width){x=x0;y+=size;}
-        if(y>=height)break;//退出
-        LCD_ShowChar(x,y,*p,size,0);
-        x+=size/2;
-        p++;
-    }  
+	while((*p<='~')&&(*p>=' '))//判断是不是非法字符!
+	{
+			if(x>=width){x=x0;y+=size;}
+			if(y>=height)break;//退出
+			LCD_ShowChar(x,y,*p,size,0);
+			x+=size/2;
+			p++;
+	}
 }
